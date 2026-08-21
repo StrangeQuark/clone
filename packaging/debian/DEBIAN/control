@@ -1,0 +1,10 @@
+Package: clone
+Version: 0.1.1
+Section: devel
+Priority: optional
+Architecture: amd64
+Depends: git
+Maintainer: StrangeQuark <maintainer@example.com>
+Description: Clone Git repositories with configurable URL shortcuts
+ Expands concise repository names into Git HTTPS or SSH remotes, then delegates
+ the clone operation to Git.
