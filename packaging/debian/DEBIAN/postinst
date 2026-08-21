@@ -1,0 +1,47 @@
+#!/bin/sh
+# Configure CLONE for the person who invoked sudo, never for root.
+
+case "${1:-}" in
+  configure) ;;
+  *) exit 0 ;;
+esac
+
+# Unattended installs and installs performed directly as root have no sensible
+# desktop user to configure. Those users can run "clone init" later.
+if [ "${DEBIAN_FRONTEND:-}" = "noninteractive" ]; then
+  exit 0
+fi
+
+install_user="${SUDO_USER:-}"
+if [ -z "$install_user" ]; then
+  install_user="$(logname 2>/dev/null || true)"
+fi
+if [ -z "$install_user" ] || [ "$install_user" = "root" ]; then
+  exit 0
+fi
+
+install_home="$(getent passwd "$install_user" | awk -F: 'NR == 1 { print $6 }')"
+if [ -z "$install_home" ] || [ ! -d "$install_home" ]; then
+  exit 0
+fi
+
+config_path="$install_home/.config/clone/config.toml"
+if [ -f "$config_path" ]; then
+  exit 0
+fi
+
+# dpkg does not promise to provide its maintainer scripts with stdin. /dev/tty
+# is the original interactive terminal when apt is run through sudo.
+if ! : </dev/tty 2>/dev/null; then
+  exit 0
+fi
+
+printf '\nSet up CLONE for %s. Press Ctrl-D to skip.\n' "$install_user" >/dev/tty
+if ! runuser -u "$install_user" -- env \
+  HOME="$install_home" \
+  XDG_CONFIG_HOME="$install_home/.config" \
+  /usr/bin/clone init </dev/tty >/dev/tty 2>/dev/tty; then
+  printf 'CLONE was installed. Configure it later with: clone init\n' >/dev/tty
+fi
+
+exit 0

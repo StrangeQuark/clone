@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -o errexit
+set -o nounset
+set -o pipefail
+
+version="${1:-}"
+[[ -n "$version" ]] || { printf 'usage: scripts/build-deb <version>\n' >&2; exit 1; }
+root_dir="$(cd "$(dirname "$0")/.." && pwd)"
+package_dir="$root_dir/.build/clone_${version}_amd64"
+output_dir="$root_dir/dist"
+
+rm -rf "$package_dir"
+mkdir -p "$package_dir/DEBIAN" "$output_dir"
+cp -a "$root_dir/packaging/debian/DEBIAN/." "$package_dir/DEBIAN/"
+sed -i "s/^Version: .*/Version: $version/" "$package_dir/DEBIAN/control"
+make -C "$root_dir" install DESTDIR="$package_dir" PREFIX=/usr
+dpkg-deb --build "$package_dir" "$output_dir/clone_${version}_amd64.deb"
